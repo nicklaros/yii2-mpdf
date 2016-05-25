@@ -8,38 +8,71 @@ use yii\base\InvalidConfigException;
 use yii\base\InvalidParamException;
 use \mPDF;
 
+/**
+ * Class Pdf enable us to create pdf file using mPDF library
+ *
+ * @property mPDF $api
+ * @property string $css
+ */
 class Pdf extends Component
 {
-    // mode
-    const MODE_BLANK = '';
-    const MODE_CORE = 'c';
-    const MODE_UTF8 = 'UTF-8';
-    const MODE_ASIAN = '+aCJK';
-
-    // format
-    const FORMAT_A3 = 'A3';
-    const FORMAT_A4 = 'A4';
-    const FORMAT_LETTER = 'Letter';
-    const FORMAT_LEGAL = 'Legal';
-    const FORMAT_FOLIO = 'Folio';
-    const FORMAT_LEDGER = 'Ledger-L';
-    const FORMAT_TABLOID = 'Tabloid';
-
-    // orientation
-    const ORIENT_PORTRAIT = 'P';
-    const ORIENT_LANDSCAPE = 'L';
-
-    // output destination
     const DEST_BROWSER = 'I';
     const DEST_DOWNLOAD = 'D';
     const DEST_FILE = 'F';
     const DEST_STRING = 'S';
 
+    const FORMAT_A3 = 'A3';
+    const FORMAT_A4 = 'A4';
+    const FORMAT_FOLIO = 'Folio';
+    const FORMAT_LEDGER = 'Ledger-L';
+    const FORMAT_LEGAL = 'Legal';
+    const FORMAT_LETTER = 'Letter';
+    const FORMAT_TABLOID = 'Tabloid';
+
+    const MODE_ASIAN = '+aCJK';
+    const MODE_BLANK = '';
+    const MODE_CORE = 'c';
+    const MODE_UTF8 = 'UTF-8';
+
+    const ORIENT_PORTRAIT = 'P';
+    const ORIENT_LANDSCAPE = 'L';
+
     /**
-     * @var string specifies the mode of the new document. If the mode is set by passing a country/language string,
-     * this may also set: available fonts, text justification, and directionality RTL.
+     * @var string HTML content to be converted to PDF
      */
-    public $mode = self::MODE_BLANK;
+    public $content = '';
+
+    /**
+     * @var string css file to prepend to the PDF
+     */
+    public $cssFile = '@vendor/nicklaros/yii2-mpdf/assets/kv-mpdf-bootstrap.min.css';
+
+    /**
+     * @var string additional inline css to append after the cssFile
+     */
+    public $inlineCss = '';
+
+    /**
+     * @var string sets the default font-family for the new document. Uses default value set in defaultCSS
+     * unless codepage has been set to "win-1252". If codepage="win-1252", the appropriate core Adobe font
+     * will be set i.e. Helvetica, Times, or Courier.
+     */
+    public $defaultFont = '';
+
+    /**
+     * @var int sets the default document font size in points (pt)
+     */
+    public $defaultFontSize = 0;
+
+    /**
+     * @var string the output destination
+     */
+    public $destination = self::DEST_BROWSER;
+
+    /**
+     * @var string the output filename
+     */
+    public $filename = '';
 
     /**
      * @var string|array, the format can be specified either as a pre-defined page size,
@@ -48,16 +81,19 @@ class Pdf extends Component
     public $format = self::FORMAT_A4;
 
     /**
-     * @var int sets the default document font size in points (pt)
+     * @var float sets the page bottom margin for the new document (in millimetres).
      */
-    public $defaultFontSize = 0;
+    public $marginBottom = 16;
 
     /**
-     * @var string sets the default font-family for the new document. Uses default value set in defaultCSS
-     * unless codepage has been set to "win-1252". If codepage="win-1252", the appropriate core Adobe font
-     * will be set i.e. Helvetica, Times, or Courier.
+     * @var float sets the page footer margin for the new document (in millimetres).
      */
-    public $defaultFont = '';
+    public $marginFooter = 9;
+
+    /**
+     * @var float sets the page header margin for the new document (in millimetres).
+     */
+    public $marginHeader = 9;
 
     /**
      * @var float sets the page left margin for the new document. All values should be specified as LENGTH in millimetres.
@@ -77,50 +113,16 @@ class Pdf extends Component
     public $marginTop = 16;
 
     /**
-     * @var float sets the page bottom margin for the new document (in millimetres).
+     * @var string specifies the mode of the new document. If the mode is set by passing a country/language string,
+     * this may also set: available fonts, text justification, and directionality RTL.
      */
-    public $marginBottom = 16;
-
-    /**
-     * @var float sets the page header margin for the new document (in millimetres).
-     */
-    public $marginHeader = 9;
-
-    /**
-     * @var float sets the page footer margin for the new document (in millimetres).
-     */
-    public $marginFooter = 9;
+    public $mode = self::MODE_BLANK;
 
     /**
      * @var string specifies the default page orientation of the new document.
      */
     public $orientation = self::ORIENT_PORTRAIT;
 
-    /**
-     * @var string css file to prepend to the PDF
-     */
-    public $cssFile = '@vendor/nicklaros/yii2-mpdf/assets/kv-mpdf-bootstrap.min.css';
-
-    /**
-     * @var string additional inline css to append after the cssFile
-     */
-    public $cssInline = '';
-
-    /**
-     * @var string the HTML content to be converted to PDF
-     */
-    public $content = '';
-
-    /**
-     * @var string the output filename
-     */
-    public $filename = '';
-
-    /**
-     * @var string the output destination
-     */
-    public $destination = self::DEST_BROWSER;
-    
     /**
      * @var string the folder path for storing the temporary data generated by mpdf.
      * If not set this defaults to `Yii::getAlias('@runtime/mpdf')`.
@@ -149,63 +151,95 @@ class Pdf extends Component
     ];
 
     /**
-     * @var mPDF api instance
-     */
-    protected $_mpdf;
-
-    /**
      * @var string the css file content
      */
-    protected $_css;
+    protected $cachedCss;
+
+    /**
+     * @var mPDF api instance
+     */
+    protected $mpdf;
 
     /**
      * @inherit doc
      */
     public function init()
     {
-        $this->initTempPaths();
+        $this->setTempPaths();
+
         parent::init();
+
         $this->parseFormat();
     }
 
     /**
-     * Initialize folder paths to allow mpdf to write temporary data.
+     * Configure mPDF options
+     * 
+     * @param array $options mPDF configuration in key value pair format.
      */
-    public function initTempPaths()
+    public function configure($options = [])
     {
-        if (empty($this->tempPath)) {
-            $this->tempPath = Yii::getAlias('@runtime/mpdf');
-        }
-        $prefix = $this->tempPath . DIRECTORY_SEPARATOR;
-        static::definePath('_MPDF_TEMP_PATH', "{$prefix}tmp");
-        static::definePath('_MPDF_TTFONTDATAPATH', "{$prefix}ttfontdata");
-    }
-    
-    /**
-     * Defines a mPDF temporary path if not set
-     *
-     * @param string $prop the mPDF constant to define
-     * @param string $dir the directory to create
-     *
-     * @return bool
-     * @throws InvalidConfigException
-     */
-    protected static function definePath($prop, $dir)
-    {
-        if (defined($prop)) {
+        if (empty($options)) {
             return;
         }
-        $status = true;
-        if (!is_dir($dir)) {
-            $status = mkdir($dir, 0777, true);
+        
+        $api = $this->api;
+        
+        foreach ($options as $key => $value) {
+            if (property_exists($api, $key)) {
+                $api->$key = $value;
+            }
         }
-        if (!$status) {
-            throw new InvalidConfigException("Could not create the folder '{$dir}' in '\$tempPath' set.");
-        }
-        define($prop, $dir);
     }
+
     /**
-     * Renders and returns the PDF output. Uses the class level property settings.
+     * Call the mPDF method with passed parameters
+     * 
+     * @param string $method the mPDF method/function name
+     * @param array $params the mPDF parameters
+     * @return mixed
+     */
+    public function execute($method, $params = [])
+    {
+        $api = $this->api;
+
+        if (!method_exists($api, $method)) {
+            throw new InvalidParamException("Invalid or undefined mPDF method '{$method}' passed to 'Pdf::execute'.");
+        }
+
+        if (!is_array($params)) {
+            $params = [$params];
+        }
+        
+        return call_user_func_array([$api, $method], $params);
+    }
+
+    /**
+     * Generate PDF output
+     * 
+     * @param string $content HTML content to be converted to PDF
+     * @param string $file the name of the file. If not specified, the document will be
+     * sent inline to the browser
+     * @param string $destination
+     * @return mixed
+     */
+    public function output($content = '', $file = '', $destination = self::DEST_BROWSER)
+    {
+        $api = $this->api;
+        $css = $this->css;
+        
+        if (!empty($css)) {
+            $api->WriteHTML($css, 1);
+            $api->WriteHTML($content, 2);
+        } else {
+            $api->WriteHTML($content);
+        }
+        
+        return $api->Output($file, $destination);
+    }
+
+    /**
+     * Render pdf output
      */
     public function render()
     {
@@ -215,27 +249,97 @@ class Pdf extends Component
                 $this->execute($method, $param);
             }
         }
+
         return $this->output($this->content, $this->filename, $this->destination);
     }
 
     /**
-     * Initializes (if needed) and fetches the mPDF API instance
-     * @return mPDF instance
+     * Define mPDF temporary path if not set, it will create new directory if not exist
+     *
+     * @param string $constant
+     * @param string $path
+     * @return bool
+     * @throws InvalidConfigException
      */
-    public function getApi()
+    protected function defineTempPath($constant, $path)
     {
-        if (empty($this->_mpdf) || !$this->_mpdf instanceof mPDF) {
-            $this->setApi();
+        if (defined($constant)) {
+            return;
         }
-        return $this->_mpdf;
+
+        $status = true;
+
+        if (!is_dir($path)) {
+            $status = mkdir($path, 0777, true);
+        }
+
+        if (!$status) {
+            throw new InvalidConfigException("Could not create the folder '{$path}' in '\$tempPath' set.");
+        }
+
+        define($constant, $path);
     }
 
     /**
-     * Sets the mPDF API instance
+     * Get mPDF API instance. It will instantiate one if not already exist
+     *
+     * @return mPDF
      */
-    public function setApi()
+    protected function getApi()
     {
-        $this->_mpdf = new mPDF(
+        if (empty($this->mpdf) || !$this->mpdf instanceof mPDF) {
+            $this->setApi();
+        }
+
+        return $this->mpdf;
+    }
+
+    /**
+     * Return css content used by this extension
+     *
+     * @return string
+     */
+    protected function getCss()
+    {
+        if (!empty($this->cachedCss)) {
+            return $this->cachedCss;
+        }
+
+        $cssFile = empty($this->cssFile) ? '' : Yii::getAlias($this->cssFile);
+
+        if (empty($cssFile) || !file_exists($cssFile)) {
+            $css = '';
+        } else {
+            $css = file_get_contents($cssFile);
+        }
+
+        $css .= $this->inlineCss;
+
+        return $css;
+    }
+
+    /**
+     * Parse the format automatically based on the orientation
+     */
+    protected function parseFormat()
+    {
+        $tag = '-' . self::ORIENT_LANDSCAPE;
+
+        if (
+            $this->orientation == self::ORIENT_LANDSCAPE &&
+            is_string($this->format) &&
+            substr($this->format, -2) != $tag
+        ) {
+            $this->format .= $tag;
+        }
+    }
+
+    /**
+     * Set mPDF API instance
+     */
+    protected function setApi()
+    {
+        $this->mpdf = new mPDF(
             $this->mode,
             $this->format,
             $this->defaultFontSize,
@@ -251,94 +355,17 @@ class Pdf extends Component
     }
 
     /**
-     * Fetches the content of the CSS file if supplied
-     * @return string
+     * Set paths for mPDF to write temporary data.
      */
-    public function getCss()
+    protected function setTempPaths()
     {
-        if (!empty($this->_css)) {
-            return $this->_css;
+        if (empty($this->tempPath)) {
+            $this->tempPath = Yii::getAlias('@runtime/mpdf');
         }
-        $cssFile = empty($this->cssFile) ? '' : Yii::getAlias($this->cssFile);
-        if (empty($cssFile) || !file_exists($cssFile)) {
-            $css = '';
-        } else {
-            $css = file_get_contents($cssFile);
-        }
-        $css .= $this->cssInline;
-        return $css;
-    }
 
-    /**
-     * Configures mPDF options
-     * @param array the mPDF configuration options entered as a `$key => value`
-     * associative array, where:
-     * - `$key`: string is the configuration property name
-     * - `$value`: mixed is the configured property value
-     */
-    public function configure($options = [])
-    {
-        if (empty($options)) {
-            return;
-        }
-        $api = $this->api;
-        foreach ($options as $key => $value) {
-            if (property_exists($api, $key)) {
-                $api->$key = $value;
-            }
-        }
-    }
+        $prefix = $this->tempPath . '/';
 
-    /**
-     * Calls the mPDF method with parameters
-     * @param string method the mPDF method / function name
-     * @param array params the mPDF parameters
-     * @return mixed
-     */
-    public function execute($method, $params = [])
-    {
-        $api = $this->api;
-        if (!method_exists($api, $method)) {
-            throw new InvalidParamException("Invalid or undefined mPDF method '{$method}' passed to 'Pdf::execute'.");
-        }
-        if (!is_array($params)) {
-            $params = [$params];
-        }
-        return call_user_func_array([$api, $method], $params);
+        $this->defineTempPath('_MPDF_TEMP_PATH', "{$prefix}tmp");
+        $this->defineTempPath('_MPDF_TTFONTDATAPATH', "{$prefix}ttfontdata");
     }
-
-    /**
-     * Generates a PDF output
-     * @param string content, the input HTML content
-     * @param string file, the name of the file. If not specified, the document will be
-     * sent to the browser inline (destination I).
-     * @param string dest, the destination. Defaults to Pdf::DEST_BROWSER.
-     * @return mixed
-     */
-    public function output($content = '', $file = '', $dest = self::DEST_BROWSER)
-    {
-        $api = $this->api;
-        $css = $this->css;
-        if (!empty($css)) {
-            $api->WriteHTML($css, 1);
-            $api->WriteHTML($content, 2);
-        } else {
-            $api->WriteHTML($content);
-        }
-        return $api->Output($file, $dest);
-    }
-
-    /**
-     * Parse the format automatically based on the orientation
-     */
-    protected function parseFormat()
-    {
-        $tag = '-' . self::ORIENT_LANDSCAPE;
-        if ($this->orientation == self::ORIENT_LANDSCAPE && is_string($this->format) && substr($this->format,
-                -2) != $tag
-        ) {
-            $this->format .= $tag;
-        }
-    }
-
 }
