@@ -162,7 +162,7 @@ class Pdf extends Component
     }
 
     /**
-     * Configure mPDF options
+     * Configures mPDF options
      * 
      * @param array $options mPDF configuration in `key value pair` format of property name and it's value
      */
@@ -182,7 +182,7 @@ class Pdf extends Component
     }
 
     /**
-     * Generate pdf output
+     * Generates pdf output
      * 
      * @param string $content HTML content to be converted to PDF
      * @param string $file the name of the file. If not specified, the document will be
@@ -206,7 +206,7 @@ class Pdf extends Component
     }
 
     /**
-     * Render pdf output
+     * Renders pdf output
      */
     public function render()
     {
@@ -221,7 +221,7 @@ class Pdf extends Component
     }
 
     /**
-     * Define mPDF temporary path. it will create new folder if passed path does'nt exist
+     * Defines mPDF temporary path. it will create new folder if passed path does'nt exist
      *
      * @param string $type
      * @param string $path
@@ -244,7 +244,7 @@ class Pdf extends Component
     }
 
     /**
-     * Return mPDF instance
+     * Returns mPDF instance
      *
      * @return mPDF
      */
@@ -258,7 +258,7 @@ class Pdf extends Component
     }
 
     /**
-     * Return css content used to style generated pdf
+     * Returns css content used to style generated pdf
      *
      * @return string
      */
@@ -299,7 +299,7 @@ class Pdf extends Component
     }
 
     /**
-     * Run mPDF method
+     * Runs mPDF method
      *
      * @param string $method mPDF method name
      * @param array $params method parameters
@@ -321,7 +321,7 @@ class Pdf extends Component
     }
 
     /**
-     * Set mPDF instance
+     * Sets mPDF instance
      */
     protected function setApi()
     {
@@ -341,7 +341,7 @@ class Pdf extends Component
     }
 
     /**
-     * Set paths for mPDF to write temporary data.
+     * Sets paths for mPDF to write temporary data.
      */
     protected function setTempPaths()
     {
