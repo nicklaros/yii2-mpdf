@@ -1,0 +1,28 @@
+{
+    "name": "nicklaros/yii2-mpdf",
+    "description": "A Yii2 wrapper component for the mPDF library to generates PDF files.",
+    "keywords": ["yii2", "extension", "pdf", "mpdf", "utf8", "html", "component"],
+    "homepage": "https://github.com/nicklaros/yii2-mpdf",
+    "type": "yii2-extension",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Nick Laros",
+            "email": "nicklaros@gmail.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": ">=2.0.0",
+        "mpdf/mpdf": "<7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "nicklaros\\yii2mpdf\\": ""
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        }
+    }
+}
