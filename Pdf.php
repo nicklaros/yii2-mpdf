@@ -230,6 +230,13 @@ class Pdf extends Component
      */
     protected function defineTempPath($type, $path)
     {
+        if (defined($type)) {
+            $path = constant($type);
+            if (is_writable($path)) {
+                return;
+            }
+        }
+
         $status = true;
 
         if (!is_dir($path)) {
