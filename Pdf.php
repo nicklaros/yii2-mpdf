@@ -325,19 +325,19 @@ class Pdf extends Component
      */
     protected function setApi()
     {
-        $this->mpdf = new Mpdf(
-            $this->mode,
-            $this->format,
-            $this->defaultFontSize,
-            $this->defaultFont,
-            $this->marginLeft,
-            $this->marginRight,
-            $this->marginTop,
-            $this->marginBottom,
-            $this->marginHeader,
-            $this->marginFooter,
-            $this->orientation
-        );
+        $this->mpdf = new Mpdf([
+            'mode' => $this->mode,
+            'format' => $this->format,
+            'default_font_size' => $this->defaultFontSize,
+            'default_font' => $this->defaultFont,
+            'margin_left' => $this->marginLeft,
+            'margin_right' => $this->marginRight,
+            'margin_top' => $this->marginTop,
+            'margin_bottom' => $this->marginBottom,
+            'margin_header' => $this->marginHeader,
+            'margin_footer' => $this->marginFooter,
+            'orientation' => $this->orientation
+        ]);
     }
 
     /**
