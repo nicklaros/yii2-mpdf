@@ -6,7 +6,7 @@ use Yii;
 use yii\base\Component;
 use yii\base\InvalidConfigException;
 use yii\base\InvalidParamException;
-use \mPDF;
+use Mpdf\Mpdf;
 
 /**
  * Class Pdf enable us to create pdf file using mPDF library
@@ -163,7 +163,7 @@ class Pdf extends Component
 
     /**
      * Configures mPDF options
-     * 
+     *
      * @param array $options mPDF configuration in `key value pair` format of property name and it's value
      */
     public function configure($options = [])
@@ -171,9 +171,9 @@ class Pdf extends Component
         if (empty($options)) {
             return;
         }
-        
+
         $api = $this->api;
-        
+
         foreach ($options as $key => $value) {
             if (property_exists($api, $key)) {
                 $api->$key = $value;
@@ -183,7 +183,7 @@ class Pdf extends Component
 
     /**
      * Generates pdf output
-     * 
+     *
      * @param string $content HTML content to be converted to PDF
      * @param string $file the name of the file. If not specified, the document will be
      * sent inline to the browser
@@ -194,7 +194,7 @@ class Pdf extends Component
     {
         $api = $this->api;
         $css = $this->css;
-        
+
         if (!empty($css)) {
             $api->WriteHTML($css, 1);
             $api->WriteHTML($content, 2);
@@ -325,7 +325,7 @@ class Pdf extends Component
      */
     protected function setApi()
     {
-        $this->mpdf = new mPDF(
+        $this->mpdf = new Mpdf(
             $this->mode,
             $this->format,
             $this->defaultFontSize,
